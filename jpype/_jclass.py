@@ -18,11 +18,108 @@
 import _jpype
 from ._pykeywords import pysafe
 from . import _jcustomizer
+import inspect
 
-__all__ = ['JClass', 'JInterface', 'JOverride']
+__all__ = ['JClass', 'JInterface', 'JOverride', 'JPublic', 'JProtected',
+        'JPrivate', 'JThrows']
 
 
-def JOverride(*args, **kwargs):
+class _JFieldDecl(object):
+    def __init__(self, cls, name, value, modifiers):
+        self.cls = cls
+        self.name = name
+        self.value = value
+        self.modifiers = modifiers
+
+    def __repr__(self):
+        return "Field(%s,%s)" % (self.cls.__name__, self.name)
+
+
+def _JMemberDecl(nonlocals, target, strict, modifiers, **kwargs):
+    """Generic annotation to pass to the code generator.
+    """
+    if not "__jspec__" in nonlocals:
+        nonlocals["__jspec__"] = []
+    jspec = nonlocals["__jspec__"]
+
+    if isinstance(target, type):
+        if not isinstance(target, _jpype.JClass):
+            raise TypeError("Fields must be Java classes")
+        prim = issubclass(target, (_jpype._JBoolean, _jpype._JNumberLong, _jpype._JChar, _jpype._JNumberFloat))
+        out = []
+        for p, v in kwargs.items():
+            if not prim and v is not None:
+                raise ValueError("Initial value must be None")
+            if prim:
+                v = _jpype.JObject(v, target)  # box it
+            var = _JFieldDecl(target, p, v, modifiers)
+            jspec.append(var)
+            out.append(var)
+        return out
+
+    if isinstance(target, type(_JMemberDecl)):
+        spec = inspect.getfullargspec(target)
+        args = spec.args
+
+        # Verify the requirements for arguments are met
+        # Must have a this argument first
+        if strict:
+            if len(args) < 1:
+                raise TypeError("Methods require this argument")
+            if args[0] != "this":
+                raise TypeError("Methods first argument must be this")
+
+            # All other arguments must be annotated as JClass types
+            for i in range(1, len(args)):
+                if not args[i] in spec.annotations:
+                    raise TypeError("Methods types must have specifications")
+                if not isinstance(spec.annotations[args[i]], _jpype.JClass):
+                    raise TypeError("Method arguments must be Java classes")
+
+            if target.__name__ != "__init__":
+                if "return" not in spec.annotations:
+                    raise TypeError("Return specification required")
+                if not isinstance(spec.annotations["return"], (_jpype.JClass, type(None))):
+                    raise TypeError("Return type must be Java type")
+
+        # Place in the Java spec list
+        for p, v in kwargs.items():
+            object.__setattr__(target, p, v)
+        if modifiers is not None:
+            jspec.append(target)
+            object.__setattr__(target, '__jmodifiers__', modifiers)
+        return target
+
+    raise TypeError("Unknown Java specification '%s'" % type(target))
+
+
+def JPublic(target, **kwargs):
+    nonlocals = inspect.stack()[1][0].f_locals
+    return _JMemberDecl(nonlocals, target, True, 1, **kwargs)
+
+
+def JProtected(target, **kwargs):
+    nonlocals = inspect.stack()[1][0].f_locals
+    return _JMemberDecl(nonlocals, target, True, 4, **kwargs)
+
+
+def JPrivate(target, **kwargs):
+    nonlocals = inspect.stack()[1][0].f_locals
+    return _JMemberDecl(nonlocals, target, True, 2, **kwargs)
+
+
+def JThrows(*args):
+    for arg in args:
+        if not isinstance(arg, _jpype.JException):
+            raise TypeError("JThrows requires Java exception arguments")
+
+    def deferred(target):
+        object.__setattr__(target, '__jthrows__', args)
+        return target
+    return deferred
+
+
+def JOverride(*target, sticky=False, rename=None, **kwargs):
     """Annotation to denote a method as overriding a Java method.
 
     This annotation applies to customizers, proxies, and extensions
@@ -34,16 +131,22 @@ def JOverride(*args, **kwargs):
       sticky=bool: Applies a customizer method to all derived classes.
 
     """
-    # Check if called bare
-    if len(args) == 1 and callable(args[0]):
-        object.__setattr__(args[0], "__joverride__", {})
-        return args[0]
-     # Otherwise apply arguments as needed
+    nonlocals = inspect.stack()[1][0].f_locals
+    if len(target) == 0:
+        overrides = {}
+        if kwargs:
+            overrides.update(kwargs)
+        if sticky:
+            overrides["sticky"] = True
+        if rename is not None:
+            overrides["rename"] = rename
 
-    def modifier(method):
-        object.__setattr__(method, "__joverride__", kwargs)
-        return method
-    return modifier
+        def deferred(method):
+            return _JMemberDecl(nonlocals, method, False, None, __joverride__=overrides)
+        return deferred
+    if len(target) == 1:
+        return _JMemberDecl(nonlocals, *target, False, None, __joverride__={})
+    raise TypeError("JOverride can only have one argument")
 
 
 class JClassMeta(type):
@@ -240,9 +343,36 @@ def _jclassDoc(cls):
     return "\n".join(out)
 
 
+def _JExtension(name, bases, members):
+    if "__jspec__" not in members:
+        raise TypeError("Java classes cannot be extended in Python")
+    jspec = members['__jspec__']
+    Factory = _jpype.JClass('org.jpype.extension.Factory')
+    cls = Factory.newClass(name, bases)
+    for i in jspec:
+        if isinstance(i, _JFieldDecl):
+            cls.addField(i.cls, i.name, i.value, i.modifiers)
+        elif isinstance(i, type(_JExtension)):
+            exceptions = getattr(i, '__jthrows__', None)
+            mspec = inspect.getfullargspec(i)
+            if i.__name__ == '__init__':
+                args = [mspec.annotations[j] for j in mspec.args[1:]]
+                cls.addCtor(args, exceptions, i.__jmodifiers__)
+            else:
+                args = [mspec.annotations[j] for j in mspec.args[1:]]
+                ret = mspec.annotations["return"]
+                cls.addMethod(i.__name__, ret, args, exceptions, i.__jmodifiers__)
+        else:
+            raise TypeError("Unknown member %s" % type(i))
+    Factory.loadClass(cls)
+
+    raise TypeError("Not implemented")
+
+
 # Install module hooks
 _jpype.JClass = JClass
 _jpype.JInterface = JInterface
 _jpype._jclassDoc = _jclassDoc
 _jpype._jclassPre = _jclassPre
 _jpype._jclassPost = _jclassPost
+_jpype._JExtension = _JExtension

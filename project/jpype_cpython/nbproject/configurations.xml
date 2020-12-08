@@ -57,10 +57,7 @@
         </logicalFolder>
       </logicalFolder>
     </logicalFolder>
-    <logicalFolder name="f1"
-                   displayName="Python Files"
-                   projectFiles="true"
-                   kind="ROOT">
+    <logicalFolder name="f1" displayName="Python Files" projectFiles="true">
       <logicalFolder name="jpype" displayName="jpype" projectFiles="true">
         <itemPath>../../jpype/__init__.py</itemPath>
         <itemPath>../../jpype/_classpath.py</itemPath>
@@ -197,6 +194,7 @@
         <itemPath>../../native/common/jp_doubletype.cpp</itemPath>
         <itemPath>../../native/common/jp_encoding.cpp</itemPath>
         <itemPath>../../native/common/jp_exception.cpp</itemPath>
+        <itemPath>../../native/common/jp_extension.cpp</itemPath>
         <itemPath>../../native/common/jp_field.cpp</itemPath>
         <itemPath>../../native/common/jp_floattype.cpp</itemPath>
         <itemPath>../../native/common/jp_functional.cpp</itemPath>
@@ -611,6 +609,11 @@
             flavor2="0">
       </item>
       <item path="../../native/common/jp_exception.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../native/common/jp_extension.cpp"
             ex="false"
             tool="1"
             flavor2="0">
