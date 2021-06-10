@@ -281,9 +281,10 @@ PyObject *PyJPMethod_getAnnotations(PyJPMethod *self, void *ctxt)
 
 int PyJPMethod_setAnnotations(PyJPMethod *self, PyObject* obj, void *ctx)
 {
-	Py_CLEAR(self->m_Annotations);
+	PyObject *old = self->m_Annotations;
 	self->m_Annotations = obj;
 	Py_XINCREF(self->m_Annotations);
+	Py_XDECREF(old);
 	return 0;
 }
 

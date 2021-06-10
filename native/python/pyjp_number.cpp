@@ -387,7 +387,7 @@ void PyJPNumber_initType(PyObject* module)
 	PyModule_AddObject(module, "_JNumberFloat", (PyObject*) PyJPNumberFloat_Type);
 	JP_PY_CHECK(); // GCOVR_EXCL_LINE
 
-	bases = PyTuple_Pack(1, &PyLong_Type, PyJPObject_Type);
+	bases = PyTuple_Pack(2, &PyLong_Type, PyJPObject_Type);
 	PyJPNumberBool_Type = (PyTypeObject*) PyJPClass_FromSpecWithBases(&numberBooleanSpec, bases);
 	Py_DECREF(bases);
 	JP_PY_CHECK(); // GCOVR_EXCL_LINE

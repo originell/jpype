@@ -17,6 +17,7 @@
 # *****************************************************************************
 import _jpype
 from ._jinit import *
+from ._jforward import JForward as _JForward
 from ._jpackage import *
 from ._jproxy import *
 from ._core import *
@@ -67,3 +68,5 @@ JField = _jpype._JField
 if hasattr(_jpype, 'bootstrap'):
    _jpype.bootstrap()
    _core.initializeResources()
+
+jroot = _JForward(None)

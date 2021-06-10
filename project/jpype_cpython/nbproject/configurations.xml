@@ -57,10 +57,7 @@
         </logicalFolder>
       </logicalFolder>
     </logicalFolder>
-    <logicalFolder name="f1"
-                   displayName="Python Files"
-                   projectFiles="true"
-                   kind="ROOT">
+    <logicalFolder name="f1" displayName="Python Files" projectFiles="true">
       <logicalFolder name="jpype" displayName="jpype" projectFiles="true">
         <itemPath>../../jpype/__init__.py</itemPath>
         <itemPath>../../jpype/_classpath.py</itemPath>
@@ -229,6 +226,7 @@
         <itemPath>../../native/python/pyjp_class.cpp</itemPath>
         <itemPath>../../native/python/pyjp_classhints.cpp</itemPath>
         <itemPath>../../native/python/pyjp_field.cpp</itemPath>
+        <itemPath>../../native/common/pyjp_forward.cpp</itemPath>
         <itemPath>../../native/python/pyjp_method.cpp</itemPath>
         <itemPath>../../native/python/pyjp_module.cpp</itemPath>
         <itemPath>../../native/python/pyjp_monitor.cpp</itemPath>
@@ -702,6 +700,11 @@
       <item path="../../native/common/jp_value.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="../../native/common/jp_voidtype.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../native/common/pyjp_forward.cpp"
             ex="false"
             tool="1"
             flavor2="0">

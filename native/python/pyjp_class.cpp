@@ -32,13 +32,12 @@ struct PyJPClass
 	PyHeapTypeObject ht_type;
 	JPClass *m_Class;
 	PyObject *m_Doc;
-} ;
+};
 
 PyObject* PyJPClassMagic = NULL;
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 int PyJPClass_Check(PyObject* obj)
@@ -201,6 +200,27 @@ PyObject* PyJPClass_FromSpecWithBases(PyType_Spec *spec, PyObject *bases)
 			case Py_tp_methods:
 				type->tp_methods = (PyMethodDef*) slot->pfunc;
 				break;
+			case Py_tp_members:
+				// FIXME some members are special in the Python type system 
+				// and need to be be removed from the list and handled.
+				// These special members are '__weaklistoffset__',
+				// '__dictoffset__' and '__vectorcalloffset__
+			{
+				PyMemberDef *members = (PyMemberDef*) slot->pfunc;
+				for (const PyMemberDef *memb = members; memb->name != NULL; memb++)
+				{
+					if (strcmp(memb->name, "__weakrefoffset__") == 0)
+					{
+						type->tp_weaklistoffset = memb->offset;
+					}
+					if (strcmp(memb->name, "__dictoffset__") == 0)
+					{
+						type->tp_dictoffset = memb->offset;
+					}
+				}
+				type->tp_members = members;
+			}
+				break;
 			case Py_sq_item:
 				heap->as_sequence.sq_item = (ssizeargfunc) slot->pfunc;
 				break;
@@ -275,6 +295,21 @@ PyObject* PyJPClass_FromSpecWithBases(PyType_Spec *spec, PyObject *bases)
 				break;
 			case Py_tp_getset:
 				type->tp_getset = (PyGetSetDef*) slot->pfunc;
+				break;
+			case Py_tp_traverse:
+				type->tp_traverse = (traverseproc) slot->pfunc;
+				break;
+			case Py_tp_clear:
+				type->tp_clear = (inquiry) slot->pfunc;
+				break;
+			case Py_tp_call:
+				type->tp_call = (ternaryfunc) slot->pfunc;
+				break;
+			case Py_nb_matrix_multiply:
+				heap->as_number.nb_matrix_multiply = (binaryfunc) slot->pfunc;
+				break;
+			case Py_nb_inplace_matrix_multiply:
+				heap->as_number.nb_inplace_matrix_multiply = (binaryfunc) slot->pfunc;
 				break;
 				// GCOVR_EXCL_START
 			default:
