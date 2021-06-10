@@ -347,8 +347,6 @@ def _JTerminate():
     try:
         import jpype.config
         # We are exiting anyway so no need to free resources
-        if _jpype.isStarted():
-            _jpype.JPypeContext.freeResources = False
         if jpype.config.onexit:
             _jpype.shutdown(jpype.config.destroy_jvm, False)
     except RuntimeError:
